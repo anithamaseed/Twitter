@@ -156,19 +156,30 @@ app.get("/user/followers/", authenticateToken, async (request, response) => {
 app.get("/tweets/:tweetId/", authenticateToken, async (request, response) => {
   const { tweetId } = request.params;
   const { username } = request;
-  const getTweetIdQuery = `
+  let getTweetIdQuery = "";
+  if (
+    (getTweetIdQuery = `
   select tweet, count(like_id) as count_like, tweet.date_time, count(reply) as count_reply
   from tweet inner join like
   on tweet.tweet_id=like.tweet_id
   inner join reply 
   on reply.tweet_id=tweet.tweet_id
   where tweet.tweet_id='${tweetId}' and tweet.user_id in (select following_user_id as user_id from follower where follower_user_id=(select user_id from user where username<>'${username}'))
-  group by tweet.tweet_id;`;
-  const getTweet = await database.get(getTweetIdQuery);
-  if (getTweetIdQuery) {
+  group by tweet.tweet_id;`)
+  ) {
     response.status(401);
     response.send("Invalid Request");
-  } else {
+  } else if (
+    (getTweetIdQuery = `
+  select tweet, count(like_id) as count_like, tweet.date_time, count(reply) as count_reply
+  from tweet inner join like
+  on tweet.tweet_id=like.tweet_id
+  inner join reply 
+  on reply.tweet_id=tweet.tweet_id
+  where tweet.tweet_id='${tweetId}' and tweet.user_id in (select following_user_id as user_id from follower where follower_user_id=(select user_id from user where username='${username}'))
+  group by tweet.tweet_id;`)
+  ) {
+    const getTweet = await database.get(getTweetIdQuery);
     response.send({
       tweet: getTweet.tweet,
       likes: getTweet.count_like,
